@@ -3,7 +3,9 @@ USAGE python output_csv_results.py \
       threshold=0.5 \
       data_path=path_to_data \
       model_path=path_to_model \
-      output_path=path_to_output 
+      output_path=path_to_output  \
+      label_map_path=path_to_label_map
+ 
 
 python output_csv_results.py threshold=0.8 data_path=~/Desktop/models/research/object_detection/test_images model_path=~/Desktop/models/research/object_detection/car_detection_pb_graph/frozen_inference_graph.pb output_path=~/Desktop/output 
 '''
@@ -31,13 +33,13 @@ from object_detection.utils import ops as utils_ops
 if StrictVersion(tf.__version__) < StrictVersion('1.9.0'):
   raise ImportError('Please upgrade your TensorFlow installation to v1.9.* or later!')
 
-from utils import label_map_util
+from object_detection.utils import label_map_util
 
-from utils import visualization_utils as vis_util
+from object_detection.utils import visualization_utils as vis_util
 
 error = False
 
-if len(sys.argv) != 5:
+if len(sys.argv) != 6:
   print("Invalid arguments.")
   sys.exit(2)
 
@@ -63,6 +65,11 @@ if(sys.argv[4].find('output_path=') != -1):
 else:
   error = True
 
+if(sys.argv[5].find('label_map=') != -1):
+  label_map_path = sys.argv[5].replace('label_map=', '')
+else:
+  error = True
+
 if error == True:
   print("Invalid arguments.")
   sys.exit(2)
@@ -71,7 +78,7 @@ if error == True:
 PATH_TO_FROZEN_GRAPH = model_path
 
 # List of the strings that is used to add correct label for each box.
-PATH_TO_LABELS = os.path.join(data_path, 'car_detection_label_map.pbtxt')
+PATH_TO_LABELS = label_map_path
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
