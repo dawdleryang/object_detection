@@ -1,6 +1,6 @@
 # object_detection
 
-This repository is forted and modified from tensorflow object detection model. 
+This repository is forked and modified from tensorflow object detection model. 
 
 To run baseline code for the hachathon, you may follow the instruction below:
 
