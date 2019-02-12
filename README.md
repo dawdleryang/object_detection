@@ -4,9 +4,10 @@ This repository is forked and modified from tensorflow object detection model.
 
 To run baseline code for the hachathon, you may follow the instruction below:
 
-1) # fork / clone this repository 
-    fork https://github.com/Dawdleryang/object_detection.git 
-    ！！！ important: make it as your own private repository and assign right to YITU admin 
+1) # fork / clone this repository      
+    ！！！ important: make it as your own private repository and assign right to YITU admin!!! 
+    
+    fork https://github.com/Dawdleryang/object_detection.git
     
     ``` bash
     # cd hackathon_sg
