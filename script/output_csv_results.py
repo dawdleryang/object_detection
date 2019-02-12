@@ -7,6 +7,7 @@ USAGE python output_csv_results.py \
 
 python output_csv_results.py threshold=0.8 data_path=~/Desktop/models/research/object_detection/test_images model_path=~/Desktop/models/research/object_detection/car_detection_pb_graph/frozen_inference_graph.pb output_path=~/Desktop/output 
 '''
+import time
 import numpy as np
 import os
 import six.moves.urllib as urllib
@@ -19,7 +20,10 @@ from collections import defaultdict
 from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image
+import os.path
 
+
+NUM_IMAGES_PER_ITERATION = 5
 # This is needed since the notebook is stored in the object_detection folder.
 sys.path.append("..")
 from object_detection.utils import ops as utils_ops
@@ -27,13 +31,13 @@ from object_detection.utils import ops as utils_ops
 if StrictVersion(tf.__version__) < StrictVersion('1.9.0'):
   raise ImportError('Please upgrade your TensorFlow installation to v1.9.* or later!')
 
-from object_detection.utils import label_map_util
+from utils import label_map_util
 
-from object_detection.utils import visualization_utils as vis_util
+from utils import visualization_utils as vis_util
 
 error = False
 
-if len(sys.argv) != 6:
+if len(sys.argv) != 5:
   print("Invalid arguments.")
   sys.exit(2)
 
@@ -59,13 +63,6 @@ if(sys.argv[4].find('output_path=') != -1):
 else:
   error = True
 
-if(sys.argv[5].find('label_map=') != -1):
-  label_map_path = sys.argv[5].replace('label_map=', '')
-else:
-  error = True
-
-
-
 if error == True:
   print("Invalid arguments.")
   sys.exit(2)
@@ -74,7 +71,7 @@ if error == True:
 PATH_TO_FROZEN_GRAPH = model_path
 
 # List of the strings that is used to add correct label for each box.
-PATH_TO_LABELS = label_map_path#os.path.join(data_path, 'label_map.pbtxt')
+PATH_TO_LABELS = os.path.join(data_path, 'car_detection_label_map.pbtxt')
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
@@ -127,7 +124,7 @@ def run_inference_for_single_image(image, graph):
         detection_boxes = tf.slice(detection_boxes, [0, 0], [real_num_detection, -1])
         detection_masks = tf.slice(detection_masks, [0, 0, 0], [real_num_detection, -1, -1])
         detection_masks_reframed = utils_ops.reframe_box_masks_to_image_masks(
-            detection_masks, detection_boxes, image.shape[0], image.shape[1])
+            detection_masks, detection_boxes, image[0].shape[0], image[0].shape[1])
         detection_masks_reframed = tf.cast(
             tf.greater(detection_masks_reframed, 0.5), tf.uint8)
         # Follow the convention by adding back the batch dimension
@@ -136,95 +133,124 @@ def run_inference_for_single_image(image, graph):
       image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
       # Run inference
-      output_dict = sess.run(tensor_dict,
-                             feed_dict={image_tensor: np.expand_dims(image, 0)})
-
+      output_array = sess.run(tensor_dict,
+                             feed_dict={image_tensor: image})
       # all outputs are float32 numpy arrays, so convert types as appropriate
-      output_dict['num_detections'] = int(output_dict['num_detections'][0])
-      output_dict['detection_classes'] = output_dict[
-          'detection_classes'][0].astype(np.uint8)
-      output_dict['detection_boxes'] = output_dict['detection_boxes'][0]
-      output_dict['detection_scores'] = output_dict['detection_scores'][0]
-      if 'detection_masks' in output_dict:
-        output_dict['detection_masks'] = output_dict['detection_masks'][0]
-  return output_dict
+      formatted_output_array = []
+      for i in range(len(output_array['num_detections'])):
+        temp_output_dict = {}
+        temp_output_dict['num_detections'] = int(output_array['num_detections'][i])
+        temp_output_dict['detection_classes'] = output_array['detection_classes'][i].astype(np.uint8)
+        temp_output_dict['detection_boxes'] = output_array['detection_boxes'][i]
+        temp_output_dict['detection_scores'] = output_array['detection_scores'][i]
+        if 'detection_masks' in output_array:
+          temp_output_dict['detection_masks'] = output_array['detection_masks'][i]
+        formatted_output_array.append(temp_output_dict)
+      
+  return formatted_output_array
 
 
-image_count = 1
-#f = open(os.path.join(output_path,"output.csv"),"w+")
-f = open(output_path,"w+")
+image_count = 0
+f = open(os.path.join(output_path,"output.csv"),"w+")
 f.write('file Id,label - confidence - bounding box\n')
 TEST_IMAGE_PATHS.sort()
-for image_path in TEST_IMAGE_PATHS:
-  f.write(image_path.replace(data_path, "").replace("/", "") + ',')  
-  image = Image.open(image_path)
+np_images = []
+start = time.time()
+save_dir = './np_save'
+reload_images = False
 
-  # the array based representation of the image will be used later in order to prepare the
-  # result image with boxes and labels on it.
-  image_np = load_image_into_numpy_array(image)
-  # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-  image_np_expanded = np.expand_dims(image_np, axis=0)
-  # Actual detection.
-  output_dict = run_inference_for_single_image(image_np, detection_graph)
-  # Visualization of the results of a detection.
+if reload_images:
+  for image_path in TEST_IMAGE_PATHS: 
+    image = Image.open(image_path)
+    # the array based representation of the image will be used later in order to prepare the
+    # result image with boxes and labels on it.
+    image_np = load_image_into_numpy_array(image)
+    # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+    image_np_expanded = np.expand_dims(image_np, axis=0)
+    np_images.append(image_np)
+    image_count += 1
+    print(image_count)
 
-  vis_util.visualize_boxes_and_labels_on_image_array(
-      image_np,
-      output_dict['detection_boxes'],
-      output_dict['detection_classes'],
-      output_dict['detection_scores'],
-      category_index,
-      instance_masks=output_dict.get('detection_masks'),
-      use_normalized_coordinates=True,
-      min_score_thresh=THRESHOLD,
-      line_thickness=3)
-  index = 0
-  counter = 0
-  for score in output_dict['detection_scores']:
-    if score > THRESHOLD:
-      counter += 1
-  counter2 = counter
-  if counter > 1:
-    f.write("\"")
-  for score in output_dict['detection_scores']:
-    if score > THRESHOLD:
-      if str(output_dict['detection_classes'][index]) == '1':
-        f.write("car ")
-      else:
-        f.write("pedestrian ")
-      boundingBoxValues = []
-      f.write(str(score) + " ")
-      boundingBox = str(output_dict['detection_boxes'][index])
-      boundingBox = boundingBox.replace("[", "")
-      boundingBox = boundingBox.replace("]", "")
-      boundingBoxValues = boundingBox.split()
-      newBoundingBox = ""
-      newBoundingBox = boundingBoxValues[1] + " " + boundingBoxValues[0] + " " + boundingBoxValues[3] + " " + boundingBoxValues[2]
+  np.save(save_dir,np.array(np_images))
+  print('Saved image_np.')
 
-      f.write(newBoundingBox)
-      if counter2 == 1 and counter > 1:
-        f.write("\"")
+else:
+  np_images = np.load('./np_save.npy')
+  np_images = list(np_images)
+  print('Loaded image_np.')
+
+print("Images: ", len(TEST_IMAGE_PATHS))
+
+num_loops = int(len(TEST_IMAGE_PATHS) / NUM_IMAGES_PER_ITERATION)
+
+output_array = []
+output_array_section = []
+np_images_section = []
+# Actual detection.
+
+for x in range(0, num_loops):
+  beginning_index = x * NUM_IMAGES_PER_ITERATION
+  end_index = beginning_index + NUM_IMAGES_PER_ITERATION
+  print(beginning_index, end_index)
+  output_array_section = run_inference_for_single_image(np_images[beginning_index:end_index], detection_graph)
+  for output_dict,image_np in zip(output_array_section,np_images[beginning_index:end_index]):
+    '''
+    vis_util.visualize_boxes_and_labels_on_image_array(
+        image_np,
+        output_dict['detection_boxes'],
+        output_dict['detection_classes'],
+        output_dict['detection_scores'],
+        category_index,
+        instance_masks=output_dict.get('detection_masks'),
+        use_normalized_coordinates=True,
+        min_score_thresh=THRESHOLD,
+        line_thickness=3)
+    '''
+    f.write(image_path.replace(data_path, "").replace("/", "") + ',')  
+    index = 0
+    counter = 0
+    for score in output_dict['detection_scores']:
+      if score > THRESHOLD:
+        counter += 1
+    counter2 = counter
+    if counter > 1:
+      f.write("\"")
+    for score in output_dict['detection_scores']:
+      if score > THRESHOLD:
+        if str(output_dict['detection_classes'][index]) == '1':
+          f.write("car ")
+        else:
+          f.write("pedestrian ")
+        boundingBoxValues = []
+        f.write(str(score) + " ")
+        boundingBox = str(output_dict['detection_boxes'][index])
+        boundingBox = boundingBox.replace("[", "")
+        boundingBox = boundingBox.replace("]", "")
+        boundingBoxValues = boundingBox.split()
+        newBoundingBox = ""
+        newBoundingBox = boundingBoxValues[1] + " " + boundingBoxValues[0] + " " + boundingBoxValues[3] + " " + boundingBoxValues[2]
+
+        f.write(newBoundingBox)
+        if counter2 == 1 and counter > 1:
+          f.write("\"")
+        f.write("\n")
+        counter2 -= 1
+        index += 1
+  
+    if counter == 0:
       f.write("\n")
-      counter2 -= 1
-      index += 1
+    #plt.figure(figsize=IMAGE_SIZE)
+    #plt.imshow(image_np)
+    #img = Image.fromarray(image_np, 'RGB')
+    #img.show()
+    #image_name = image_path.replace(data_path, "")
+    #img.save(os.path.join(output_path, image_name))
+    image_count += 1
 
+end = time.time()
+print('Total time:')
+print(end - start)
 
-  if counter == 0:
-    f.write("\n")
-  #plt.figure(figsize=IMAGE_SIZE)
-  #plt.imshow(image_np)
-  #img = Image.fromarray(image_np, 'RGB')
-  #img.show()
-  #image_name = image_path.replace(data_path, "")
-  #img.save(os.path.join(output_path, image_name))
-  print(image_count)
-  image_count += 1
-f.close() 
-
-
-
-
-
-
+f.close()
 
 
