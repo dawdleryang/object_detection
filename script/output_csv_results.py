@@ -1,13 +1,13 @@
 '''
 USAGE python output_csv_results.py \
       threshold=0.5 \
-      data_path=path_to_data \
+      data_dir=path_to_data \
       model_path=path_to_model \
       output_path=path_to_output  \
       label_map_path=path_to_label_map
  
 
-python output_csv_results.py threshold=0.8 data_path=~/Desktop/models/research/object_detection/test_images model_path=~/Desktop/models/research/object_detection/car_detection_pb_graph/frozen_inference_graph.pb output_path=~/Desktop/output 
+python output_csv_results.py threshold=0.8 data_dir=~/Desktop/models/research/object_detection/test_images model_path=~/Desktop/models/research/object_detection/car_detection_pb_graph/frozen_inference_graph.pb output_path=~/Desktop/output 
 '''
 import time
 import numpy as np
@@ -48,9 +48,9 @@ if(sys.argv[1].find('threshold=') != -1):
 else:
   error = True
 
-if(sys.argv[2].find('data_path=') != -1):
-  data_path = sys.argv[2].replace('data_path=', '')
-  if data_path[-1:] == "\\":
+if(sys.argv[2].find('data_dir=') != -1):
+  data_dir = sys.argv[2].replace('data_dir=', '')
+  if data_dir[-1:] == "\\":
     print('asdfjkashdfksdafkl')
 else:
   error = True
@@ -98,9 +98,9 @@ def load_image_into_numpy_array(image):
 # image1.jpg
 # image2.jpg
 # If you want to test the code with your images, just add path to the images to the TEST_IMAGE_PATHS.
-PATH_TO_TEST_IMAGES_DIR = data_path
+PATH_TO_TEST_IMAGES_DIR = data_dir
 TEST_IMAGE_PATHS = []
-for image_path in os.listdir(data_path):
+for image_path in os.listdir(data_dir):
   if image_path.find(".png") != -1:
     TEST_IMAGE_PATHS.append(os.path.join(PATH_TO_TEST_IMAGES_DIR , image_path))
 
@@ -158,7 +158,7 @@ def run_inference_for_single_image(image, graph):
 
 
 image_count = 0
-f = open(os.path.join(output_path,"output.csv"),"w+")
+f = open(output_path,"w+")
 f.write('file Id,label - confidence - bounding box\n')
 TEST_IMAGE_PATHS.sort()
 np_images = []
@@ -213,7 +213,7 @@ for x in range(0, num_loops):
         min_score_thresh=THRESHOLD,
         line_thickness=3)
     '''
-    f.write(image_path.replace(data_path, "").replace("/", "") + ',')  
+    f.write(image_path.replace(data_dir, "").replace("/", "") + ',')  
     index = 0
     counter = 0
     for score in output_dict['detection_scores']:
@@ -250,7 +250,7 @@ for x in range(0, num_loops):
     #plt.imshow(image_np)
     #img = Image.fromarray(image_np, 'RGB')
     #img.show()
-    #image_name = image_path.replace(data_path, "")
+    #image_name = image_path.replace(data_dir, "")
     #img.save(os.path.join(output_path, image_name))
     image_count += 1
 
