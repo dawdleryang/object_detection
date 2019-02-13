@@ -16,6 +16,7 @@ import six.moves.urllib as urllib
 import sys
 import tarfile
 import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  
 import zipfile
 from distutils.version import StrictVersion
 from collections import defaultdict
@@ -186,7 +187,7 @@ else:
   np_images = list(np_images)
   print('Loaded image_np.')
 
-print("Images: ", len(TEST_IMAGE_PATHS))
+print("Total Test Images: ", len(TEST_IMAGE_PATHS))
 
 num_loops = int(len(TEST_IMAGE_PATHS) / NUM_IMAGES_PER_ITERATION)
 
@@ -198,7 +199,7 @@ np_images_section = []
 for x in range(0, num_loops):
   beginning_index = x * NUM_IMAGES_PER_ITERATION
   end_index = beginning_index + NUM_IMAGES_PER_ITERATION
-  print(beginning_index, end_index)
+  print("Processing Images: ", beginning_index, end_index)
   output_array_section = run_inference_for_single_image(np_images[beginning_index:end_index], detection_graph)
   for output_dict,image_np in zip(output_array_section,np_images[beginning_index:end_index]):
     '''
