@@ -65,7 +65,7 @@ To run baseline code for the hachathon, you may follow the instruction below:
 8) # to submit the results 
     please follow the instruction from ”Hackathon Infra User Manual“ to submit your detection results. 
 
-    git push your modified codes to your private repository.
+    git push your modified codes to your private repository whenever you make a submission.
     
     !!!DO PUSH YOUR CODES FOR EVERY SUBMISSION YOU MADE FOR CODE VERIFICATION PURPOSE!!!
 
