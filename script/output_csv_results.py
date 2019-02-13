@@ -26,7 +26,7 @@ from PIL import Image
 import os.path
 
 
-NUM_IMAGES_PER_ITERATION = 5
+NUM_IMAGES_PER_ITERATION = 100
 # This is needed since the notebook is stored in the object_detection folder.
 sys.path.append("..")
 from object_detection.utils import ops as utils_ops
@@ -95,77 +95,60 @@ def load_image_into_numpy_array(image):
   return np.array(image.getdata()).reshape(
       (im_height, im_width, 3)).astype(np.uint8)
 
-# For the sake of simplicity we will use only 2 images:
-# image1.jpg
-# image2.jpg
-# If you want to test the code with your images, just add path to the images to the TEST_IMAGE_PATHS.
 PATH_TO_TEST_IMAGES_DIR = data_dir
 TEST_IMAGE_PATHS = []
 for image_path in os.listdir(data_dir):
   if image_path.find(".png") != -1:
     TEST_IMAGE_PATHS.append(os.path.join(PATH_TO_TEST_IMAGES_DIR , image_path))
 
-# Size, in inches, of the output images.
-IMAGE_SIZE = (12, 8)
 
-def run_inference_for_single_image(image, graph):
+def run_inference_for_multiple_images(images, graph):
   with graph.as_default():
     with tf.Session() as sess:
-      # Get handles to input and output tensors
+      output_dicts = []
       ops = tf.get_default_graph().get_operations()
       all_tensor_names = {output.name for op in ops for output in op.outputs}
       tensor_dict = {}
       for key in [
           'num_detections', 'detection_boxes', 'detection_scores',
-          'detection_classes', 'detection_masks'
+          'detection_classes'
       ]:
         tensor_name = key + ':0'
         if tensor_name in all_tensor_names:
           tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
               tensor_name)
-      if 'detection_masks' in tensor_dict:
-        # The following processing is only for single image
-        detection_boxes = tf.squeeze(tensor_dict['detection_boxes'], [0])
-        detection_masks = tf.squeeze(tensor_dict['detection_masks'], [0])
-        # Reframe is required to translate mask from box coordinates to image coordinates and fit the image size.
-        real_num_detection = tf.cast(tensor_dict['num_detections'][0], tf.int32)
-        detection_boxes = tf.slice(detection_boxes, [0, 0], [real_num_detection, -1])
-        detection_masks = tf.slice(detection_masks, [0, 0, 0], [real_num_detection, -1, -1])
-        detection_masks_reframed = utils_ops.reframe_box_masks_to_image_masks(
-            detection_masks, detection_boxes, image[0].shape[0], image[0].shape[1])
-        detection_masks_reframed = tf.cast(
-            tf.greater(detection_masks_reframed, 0.5), tf.uint8)
-        # Follow the convention by adding back the batch dimension
-        tensor_dict['detection_masks'] = tf.expand_dims(
-            detection_masks_reframed, 0)
+
       image_tensor = tf.get_default_graph().get_tensor_by_name('image_tensor:0')
 
-      # Run inference
-      output_array = sess.run(tensor_dict,
-                             feed_dict={image_tensor: image})
-      # all outputs are float32 numpy arrays, so convert types as appropriate
-      formatted_output_array = []
-      for i in range(len(output_array['num_detections'])):
-        temp_output_dict = {}
-        temp_output_dict['num_detections'] = int(output_array['num_detections'][i])
-        temp_output_dict['detection_classes'] = output_array['detection_classes'][i].astype(np.uint8)
-        temp_output_dict['detection_boxes'] = output_array['detection_boxes'][i]
-        temp_output_dict['detection_scores'] = output_array['detection_scores'][i]
-        if 'detection_masks' in output_array:
-          temp_output_dict['detection_masks'] = output_array['detection_masks'][i]
-        formatted_output_array.append(temp_output_dict)
-      
-  return formatted_output_array
+      for index, image in enumerate(images):
+        image = np.expand_dims(image, axis=0)
+        output_array = sess.run(tensor_dict, feed_dict={image_tensor: image})
+        # all outputs are float32 numpy arrays, so convert types as appropriate
+        formatted_output_array = []
+        for i in range(len(output_array['num_detections'])):
+          temp_output_dict = {}
+          temp_output_dict['num_detections'] = int(output_array['num_detections'][i])
+          temp_output_dict['detection_classes'] = output_array['detection_classes'][i].astype(np.uint8)
+          temp_output_dict['detection_boxes'] = output_array['detection_boxes'][i]
+          temp_output_dict['detection_scores'] = output_array['detection_scores'][i]
+          formatted_output_array.append(temp_output_dict)
+
+        output_dicts.append(formatted_output_array)
+       
+
+  return output_dicts
 
 
 image_count = 0
 f = open(output_path,"w+")
-f.write('file Id,label - confidence - bounding box\n')
+f.write('fileId,predictionResult\n')
 TEST_IMAGE_PATHS.sort()
 np_images = []
+id_images = []
 start = time.time()
-save_dir = './np_save'
-reload_images = False
+reload_images = True
+if os.path.isfile('image_np.npy') and os.path.isfile('image_id.npy'):
+    reload_images = False
 
 if reload_images:
   for image_path in TEST_IMAGE_PATHS: 
@@ -176,45 +159,41 @@ if reload_images:
     # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
     image_np_expanded = np.expand_dims(image_np, axis=0)
     np_images.append(image_np)
+    id_images.append(os.path.basename(image_path))
     image_count += 1
     print(image_count)
 
-  np.save(save_dir,np.array(np_images))
-  print('Saved image_np.')
+  np.save('image_np',np.array(np_images))
+  np.save('image_id',id_images)
+  print('Saved image_np and image_id')
 
 else:
-  np_images = np.load('./np_save.npy')
+  np_images = np.load('./image_np.npy')
   np_images = list(np_images)
-  print('Loaded image_np.')
+  id_images = np.load('./image_id.npy') 
+  print('Loaded image_np and image_id.')
 
 print("Total Test Images: ", len(TEST_IMAGE_PATHS))
 
-num_loops = int(len(TEST_IMAGE_PATHS) / NUM_IMAGES_PER_ITERATION)
+num_loops = int(len(TEST_IMAGE_PATHS) / NUM_IMAGES_PER_ITERATION) + 1
 
 output_array = []
 output_array_section = []
 np_images_section = []
 # Actual detection.
-
-for x in range(0, num_loops):
+for x in range(num_loops):
   beginning_index = x * NUM_IMAGES_PER_ITERATION
   end_index = beginning_index + NUM_IMAGES_PER_ITERATION
+
+  if end_index > len(TEST_IMAGE_PATHS):
+      end_index = len(TEST_IMAGE_PATHS) 
+  
+
   print("Processing Images: ", beginning_index, end_index)
-  output_array_section = run_inference_for_single_image(np_images[beginning_index:end_index], detection_graph)
-  for output_dict,image_np in zip(output_array_section,np_images[beginning_index:end_index]):
-    '''
-    vis_util.visualize_boxes_and_labels_on_image_array(
-        image_np,
-        output_dict['detection_boxes'],
-        output_dict['detection_classes'],
-        output_dict['detection_scores'],
-        category_index,
-        instance_masks=output_dict.get('detection_masks'),
-        use_normalized_coordinates=True,
-        min_score_thresh=THRESHOLD,
-        line_thickness=3)
-    '''
-    f.write(image_path.replace(data_dir, "").replace("/", "") + ',')  
+  output_array_section = run_inference_for_multiple_images(np_images[beginning_index:end_index], detection_graph)
+  for tmp_output_dict,image_np,image_id in zip(output_array_section,np_images[beginning_index:end_index],id_images[beginning_index:end_index]):
+    output_dict = tmp_output_dict[0]
+    f.write(image_id + ',')  
     index = 0
     counter = 0
     for score in output_dict['detection_scores']:
@@ -247,12 +226,7 @@ for x in range(0, num_loops):
   
     if counter == 0:
       f.write("\n")
-    #plt.figure(figsize=IMAGE_SIZE)
-    #plt.imshow(image_np)
-    #img = Image.fromarray(image_np, 'RGB')
-    #img.show()
-    #image_name = image_path.replace(data_dir, "")
-    #img.save(os.path.join(output_path, image_name))
+
     image_count += 1
 
 end = time.time()
