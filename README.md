@@ -2,7 +2,7 @@
 
 This repository is forked and modified from tensorflow object detection model. 
 
-To run baseline code for the hachathon, you may follow the instruction below:
+To run baseline code for the hackathon, you may follow the instruction below:
 
 1) # fork / mirror this repository      
     !!!important: make it as your own private repository and assign right to YITU admin!!! 
