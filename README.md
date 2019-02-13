@@ -59,7 +59,7 @@ To run baseline code for the hachathon, you may follow the instruction below:
 7) # to output the results to .csv
 
     ``` bash
-    python script/output_csv_results.py threshold=0.5 data_path=../input/testing/images/ model_path=output/frozen_inference_graph.pb output_path=output/submission.csv label_map=../input/label_map.pbtxt
+    python script/output_csv_results.py threshold=0.5 data_dir=../input/testing/images/ model_path=output/frozen_inference_graph.pb output_path=output/submission.csv label_map=../input/label_map.pbtxt
     ```
         
 8) # to submit the results 
