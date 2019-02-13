@@ -36,24 +36,24 @@ To run baseline code for the hachathon, you may follow the instruction below:
 4) # to train the model 
 
     ``` bash 
-    python script/train.py --logtostderr --train_dir=training/baseline/ --pipeline_config_path=training/baseline.config
+    python script/train.py --logtostderr --train_dir=training/baseline/ --pipeline_config_path=training/hackathon_baseline.config
     ```
-   #to visualize the training results
-      tensorboard --logdir=training/baseline
+   #to visualize the training results, can only use 8000 for port no. 
+      tensorboard --logdir=training/baseline --port 8000
      
 5) # to eval the trained model 
 
     ``` bash 
-    python script/eval.py --logtostderr --pipeline_config_path=training/baseline.config --checkpoint_dir=training/baseline --eval_dir=training/baseline
+    python script/eval.py --logtostderr --pipeline_config_path=training/hackathon_baseline.config --checkpoint_dir=training/baseline --eval_dir=eval/baseline
     ```
     
-   #To visualize the eval results
-      tensorboard --logdir=eval/
+   #To visualize the eval results, can only use 8000 for port no. 
+      tensorboard --logdir=eval/baseline --port 8000
 
 6) # to export the trained model 
 
     ``` bash
-    python script/export_inference_graph.py --input_type image_tensor --pipeline_config_path training/baseline.config   --trained_checkpoint_prefix training/baseline/model.ckpt-20000 --output_directory output/
+    python script/export_inference_graph.py --input_type image_tensor --pipeline_config_path training/hackathon_baseline.config   --trained_checkpoint_prefix training/baseline/model.ckpt-20000 --output_directory output/
     ```
     
 7) # to output the results to .csv
