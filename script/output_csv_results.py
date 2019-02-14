@@ -141,7 +141,7 @@ def run_inference_for_multiple_images(images, graph):
 
 image_count = 0
 f = open(output_path,"w+")
-f.write('fileId,predictionResult\n')
+f.write('fileId,labelString\n')
 TEST_IMAGE_PATHS.sort()
 np_images = []
 id_images = []
