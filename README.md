@@ -7,29 +7,25 @@ To run baseline code for the hackathon, you may follow the instruction below:
 1) # fork / mirror this repository      
     !!!important: make it as your own private repository and assign right to YITU admin （refer to section 5 in "Hackathon_Baseline_User_Guider"!!! 
     
-    fork/mirror https://github.com/Dawdleryang/object_detection.git
-    
-    ``` bash
-    # cd hackathon_sg
-    git clone https://github.com/your_own_private_repository 
-    ```
 
 2) # environment setttings
 
     ``` bash
     # activate AWS virtual environment
+    cd ~
     source activate tensorflow_p36
     ```
 
     ``` bash
     # Setup PYTHONPATH
-    # cd hackathon_sg/ 
+    cd hackathon-sg/ 
     export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim    
     ```
 
 3) # to generate tfrecord data
 
     ``` bash
+    cd object_detection
     python script/generate_tfrecord_from_csv.py --image_dir ../input/training/images/ --output_path ../input/hackathon --csv_file ../input/training/train_label.csv --validation_set_size 500
     ```
 
