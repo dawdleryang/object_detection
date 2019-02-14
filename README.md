@@ -30,7 +30,7 @@ To run baseline code for the hackathon, you may follow the instruction below:
 3) # to generate tfrecord data
 
     ``` bash
-    python script/generate_tfrecord_from_csv.py --image_dir ../input/training/images/ --output_path ../input/yitu --csv_file ../input/training/train_label.csv --validation_set_size 500
+    python script/generate_tfrecord_from_csv.py --image_dir ../input/training/images/ --output_path ../input/hackathon --csv_file ../input/training/train_label.csv --validation_set_size 500
     ```
 
 4) # to train the model 
